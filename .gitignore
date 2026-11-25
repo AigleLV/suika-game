@@ -1,0 +1,11 @@
+# Executable produit par make
+suika
+
+# Infos de debug generees par clang sur macOS (-g)
+*.dSYM/
+
+# Fichiers objets
+*.o
+
+# Fichiers systeme macOS
+.DS_Store

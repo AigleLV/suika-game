@@ -1,0 +1,77 @@
+JEU DE LA PASTEQUE (SUIKA GAME) EN C
+====================================
+
+Langage : C
+Bibliotheque graphique : raylib
+
+
+COMPOSITION
+-----------
+
+- La main : le fruit pas encore lache, qui suit la souris
+- La suivante : apercu du prochain fruit
+- La boite : contient tous les fruits deja tombes
+- Nombre de tailles de fruits : 10
+- Ligne de game over : en haut de la boite, avec un delai
+  (ex : 2 secondes au-dessus de la ligne avant de perdre)
+- Score : affiche a l'ecran
+- Regles de tirage : seules les 4-5 plus petites tailles
+  peuvent apparaitre dans la main
+- Taille maximale : deux fruits de taille 10 qui fusionnent
+  disparaissent et donnent un gros bonus de points
+- Delai entre deux lachers : empeche de spammer le clic
+
+
+ETAPES
+------
+
+0. Structures de donnees
+   - struct Fruit (position, ancienne position, rayon, niveau, actif)
+   - Tableau des 10 tailles (rayon, couleur, points)
+   - Tableau de fruits (taille fixe, ex : 200)
+
+1. Affichage
+   - La fenetre, la boite, un cercle dessine
+
+2. La main
+   - Le fruit suit la souris (limite a la largeur de la boite)
+   - Lacher au clic
+   - Apercu du fruit suivant
+   - Tirage aleatoire parmi les petites tailles
+
+3. Gravite
+   - Le fruit lache tombe
+
+4. Collisions avec la boite
+   - Les fruits restent dans la boite (murs + fond)
+
+5. Collisions entre fruits
+   - Les fruits ne se chevauchent plus
+   - Ils s'empilent sans trembler (plusieurs passes par frame)
+   - /!\ Etape la plus longue du projet
+
+6. Fusion
+   - Deux fruits identiques qui se touchent -> taille au-dessus
+   - Un fruit ne peut fusionner qu'une fois par frame
+   - Cas particulier de la taille maximale
+
+7. Score
+   - Points attribues a chaque fusion
+
+8. Game over
+   - Ligne limite + delai
+   - Ecran de fin
+   - Possibilite de recommencer
+
+9. Graphisme final
+   - Couleurs, visages ou images de fruits
+   - Petite animation de fusion
+
+
+ASTUCES
+-------
+
+- Ajouter une touche de debug qui fait apparaitre 20 fruits
+  d'un coup, pour tester l'empilement rapidement (etapes 3-5)
+- Methode Verlet conseillee pour la physique (plus stable)
+- Ne passer a la fusion que quand l'empilement est stable
