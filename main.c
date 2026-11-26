@@ -15,6 +15,7 @@
 #define BOITE_Y 180
 #define BOITE_LARGEUR 580
 #define BOITE_HAUTEUR 600
+#define EPAISSEUR_BOITE 4
 
 #define MAIN_Y (BOITE_Y - 80)
 
@@ -82,11 +83,35 @@ void ajouter_fruit(float x, float y, int niveau){
 void mettre_a_jour_fruit(Fruit *f) {
     float vitesse_y = f->position.y - f->ancienne_position.y;
     float vitesse_x = f->position.x - f->ancienne_position.x;
-    
+
     f->ancienne_position = f->position;
 
     f->position.y = f->position.y + vitesse_y + GRAVITE * DT*DT;
     f->position.x = f->position.x + vitesse_x;
+
+}
+
+void contraindre_boite(Fruit *f){
+    float r     = NIVEAUX[f->niveau].rayon;
+    float x_min = BOITE_X;
+    float x_max = BOITE_X + BOITE_LARGEUR;
+    float y_max = BOITE_Y + BOITE_HAUTEUR;
+    /* Collision Boite */
+    /* Mur gauche */
+    if (f->position.x < x_min + r){
+        f->position.x = x_min + r;
+    }
+
+    /* Mur droite */
+    if (f->position.x > x_max - r){
+        f->position.x = x_max - r;
+    }
+
+    /* Fond */
+    if (f->position.y > y_max - r){
+        f->position.y = y_max - r;
+    }
+
 }
 
 void touche_debug(void) {
@@ -143,6 +168,7 @@ int main(void)
         for (int i = 0; i < MAX_FRUITS; i++) {
             if ( fruits[i].actif == true){
                 mettre_a_jour_fruit(&fruits[i]);
+                contraindre_boite(&fruits[i]);
             }
         }
         
@@ -154,7 +180,7 @@ int main(void)
         ClearBackground(RAYWHITE);
 
         /* Dessin de la boite*/
-        DrawRectangleLinesEx((Rectangle){BOITE_X, BOITE_Y, BOITE_LARGEUR, BOITE_HAUTEUR}, 4, DARKGRAY);
+        DrawRectangleLinesEx((Rectangle){BOITE_X, BOITE_Y, BOITE_LARGEUR, BOITE_HAUTEUR}, EPAISSEUR_BOITE, DARKGRAY);
 
         /* Dessin de toute les fruits*/
         for (int i = 0; i < MAX_FRUITS; i++) {
