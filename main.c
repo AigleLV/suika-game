@@ -9,7 +9,7 @@
 #define LARGEUR_FENETRE 600
 #define HAUTEUR_FENETRE 800
 
-#define NB_NIVEAUX 10      /* nombre de tailles de fruits */
+#define NB_NIVEAUX 11      /* nombre de tailles de fruits */
 #define MAX_FRUITS 200     /* taille du tableau de fruits */
 
 #define BOITE_X 10
@@ -47,16 +47,17 @@ typedef struct {
 
 
 static const InfoNiveau NIVEAUX[NB_NIVEAUX] = {
-    {  20.0f, { 220,  20,  60, 255 },  1 },  /* niveau 0 : cerise    - rouge cerise   */
-    {  30.0f, { 255,  80, 120, 255 },  2 },  /* niveau 1 : fraise    - rose fraise    */
-    {  40.0f, { 140,  60, 200, 255 },  3 },  /* niveau 2 : raisin    - violet         */
-    {  50.0f, { 255, 220,  40, 255 },  4 },  /* niveau 3 : citron    - jaune          */
-    {  60.0f, { 255, 140,   0, 255 },  5 },  /* niveau 4 : kaki      - orange         */
-    {  70.0f, { 120, 200,  40, 255 },  6 },  /* niveau 5 : pomme     - vert pomme     */
-    {  80.0f, { 210, 190, 120, 255 },  7 },  /* niveau 6 : poire     - beige          */
-    {  90.0f, { 200, 150,  30, 255 },  8 },  /* niveau 7 : ananas    - doré           */
-    { 100.0f, { 170, 230, 160, 255 },  9 },  /* niveau 8 : melon     - vert pâle      */
-    { 120.0f, {  30, 130,  50, 255 }, 10 },  /* niveau 9 : pastèque  - vert foncé     */
+    {  15.0f, { 220,  20,  60, 255 },  1 },  /* niveau 0 : cerise    - rouge cerise   */
+    {  22.0f, { 255,  80, 120, 255 },  3 },  /* niveau 1 : fraise    - rose fraise    */
+    {  30.0f, { 140,  60, 200, 255 },  6 },  /* niveau 2 : raisin    - violet         */
+    {  38.0f, { 255, 220,  40, 255 }, 10 },  /* niveau 3 : citron    - jaune          */
+    {  47.0f, { 255, 140,   0, 255 }, 15 },  /* niveau 4 : kaki      - orange         */
+    {  57.0f, { 120, 200,  40, 255 }, 21 },  /* niveau 5 : pomme     - vert pomme     */
+    {  67.0f, { 210, 190, 120, 255 }, 28 },  /* niveau 6 : poire     - beige          */
+    {  78.0f, { 255, 180, 170, 255 }, 36 },  /* niveau 6 : Peche     -                */    
+    {  90.0f, { 200, 150,  30, 255 }, 45 },  /* niveau 7 : ananas    - doré           */
+    { 105.0f, { 170, 230, 160, 255 }, 55 },  /* niveau 8 : melon     - vert pâle      */
+    { 125.0f, {  30, 130,  50, 255 }, 66 },  /* niveau 9 : pastèque  - vert foncé     */
 };
 
 /* Le tableau de tous les fruits */
