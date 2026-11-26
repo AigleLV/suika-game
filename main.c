@@ -23,8 +23,9 @@
 #define DT (1.0f / 60.0f)
 #define GRAVITE 1500.0f
 
-#define ITERATIONS 8
+#define ITERATIONS 16
 
+#define TOLERANCE_FUSION 2
 /* =========================================================
         STRUCTURES DE DONNEES
    ========================================================= */
@@ -41,6 +42,7 @@ typedef struct {
     Vector2 ancienne_position;
     int     niveau;
     bool    actif;
+    bool    deja_fusionne;
 } Fruit;
 
 
@@ -60,14 +62,14 @@ static const InfoNiveau NIVEAUX[NB_NIVEAUX] = {
 /* Le tableau de tous les fruits */
 static Fruit fruits[MAX_FRUITS];
 
+/* =========================================================
+        FONCTION
+   ========================================================= */
+
 /* Fonction qui renvoie un niveau aléatoire entre 0 et 4.*/
 int tirer_niveau(void){
     return GetRandomValue(0, 4);
 }
-
-/* =========================================================
-        FONCTION
-   ========================================================= */
 
 /* Fonction qui remplit la première case libre. 
    Si le tableau est plein, elle ne fait rien.*/
@@ -156,20 +158,87 @@ void resoudre_collision(Fruit *a, Fruit *b){
 
 }
 
+void gerer_fusions(void){
+    // --- 1. Remise à zéro pour cette frame ---
+    for (int i = 0; i < MAX_FRUITS; i++ ){
+        fruits[i].deja_fusionne = false;
+    }
+
+    // --- 2. Parcours de toutes les paires ---
+    for (int i = 0; i < MAX_FRUITS; i++){
+        for( int j = i +1; j < MAX_FRUITS; j++){
+
+            // a) On écarte les paires qui ne nous intéressent pas
+            if (fruits[i].actif == true &&          // Si fruit i actif
+            fruits[j].actif == true &&              // Si fruit j actif
+            fruits[i].niveau == fruits[j].niveau && // Si les 2 fruits sont de la meme taille
+            fruits[i].deja_fusionne == false &&     // Si le fruit i n'a pas encore fusionne
+            fruits[j].deja_fusionne == false)       // Si le fruit i n'a pas encore fusionne
+            {
+                // b) Sont-ils en contact ?
+                float dx = fruits[j].position.x - fruits[i].position.x;
+                float dy = fruits[j].position.y - fruits[i].position.y;
+                float distance = sqrtf(dx*dx + dy*dy);
+                float r = NIVEAUX[fruits[i].niveau].rayon;
+
+                if ( distance < r + r + TOLERANCE_FUSION) { // Ils sont a bonne distance pour fusionner
+                    // Cas taille max de fruit -> 2 pasteque
+                    if (fruits[i].niveau == NB_NIVEAUX -1 ){
+                        fruits[i].actif = false;
+                        fruits[j].actif = false;
+                        // (étape 7 : ajouter le gros bonus ici)
+                    }
+                    else {
+                        float milieu_x = (fruits[j].position.x + fruits[i].position.x) /2;
+                        float milieu_y = (fruits[j].position.y + fruits[i].position.y) /2;
+
+                        fruits[i].position.x = milieu_x;
+                        fruits[i].position.y = milieu_y;
+
+                        fruits[i].ancienne_position.x = milieu_x;
+                        fruits[i].ancienne_position.y = milieu_y;
+
+                        fruits[i].niveau += 1;
+
+                        fruits[j].actif = false;
+
+                        fruits[i].deja_fusionne = true;
+                        fruits[j].deja_fusionne = true;
+                    }
+                }
+            }
+
+        }
+
+    }
+
+}
+
 /* =========================================================
         DEBUG
    ========================================================= */
 
-void touche_debug(void) {
+void touche_debug_D(void) {
     if (IsKeyPressed(KEY_D)){
         for (int i = 0; i < 10; i ++){
             int niveau = tirer_niveau();
-            int x_min = BOITE_X + NIVEAUX[niveau].rayon;
-            int x_max = BOITE_X + BOITE_LARGEUR - NIVEAUX[niveau].rayon;
+            int x_min = BOITE_X + EPAISSEUR_BOITE + NIVEAUX[niveau].rayon;
+            int x_max = BOITE_X + BOITE_LARGEUR - EPAISSEUR_BOITE - NIVEAUX[niveau].rayon;
             ajouter_fruit(GetRandomValue(x_min, x_max), MAIN_Y, niveau);
         }
     }
 }
+
+void touche_debug_F(void) {
+    if (IsKeyPressed(KEY_F)){
+        int x_min = BOITE_X + EPAISSEUR_BOITE + NIVEAUX[9].rayon;
+        int x_max = BOITE_X + BOITE_LARGEUR - EPAISSEUR_BOITE - NIVEAUX[9].rayon;
+        ajouter_fruit(x_min, MAIN_Y, 9);        // Pasteque a x min
+        ajouter_fruit(x_max, MAIN_Y, 9);        // Pasteque a x max
+        
+    }
+}
+
 
 /* =========================================================
         AFFICHAGE
@@ -190,8 +259,8 @@ int main(void)
 
     while (!WindowShouldClose()) {        // 2. boucle : 1 tour = 1 image
         /* --- 1. Mise a jour --- */
-        int borner_x_min = BOITE_X + NIVEAUX[niveau_main].rayon;
-        int borner_x_max = BOITE_X + BOITE_LARGEUR - NIVEAUX[niveau_main].rayon;
+        int borner_x_min = BOITE_X + EPAISSEUR_BOITE + NIVEAUX[niveau_main].rayon;
+        int borner_x_max = BOITE_X + BOITE_LARGEUR - EPAISSEUR_BOITE - NIVEAUX[niveau_main].rayon;
         int sourisX = GetMouseX();
 
         float x = sourisX;
@@ -225,14 +294,22 @@ int main(void)
                     }
                 }
             }
+
             for (int i = 0; i < MAX_FRUITS; i++) {
                 if ( fruits[i].actif == true){
                     contraindre_boite(&fruits[i]);
                 }
             }
         }
-        /* Touche pour debug. Ajoute 10 fruits*/
-        touche_debug();
+        
+        /* Pour gerer les fusions */
+        gerer_fusions();
+
+        /* Touche pour debug. Ajoute 10 fruits */
+        touche_debug_D();
+        
+        /* Touche pour debug. Ajoute 2 pasteque */
+        touche_debug_F();
 
         /* --- 2. Dessin --- */
         BeginDrawing();
@@ -241,13 +318,13 @@ int main(void)
         /* Dessin de la boite*/
         DrawRectangleLinesEx((Rectangle){BOITE_X, BOITE_Y, BOITE_LARGEUR, BOITE_HAUTEUR}, EPAISSEUR_BOITE, DARKGRAY);
 
-        /* Dessin de toute les fruits*/
+        /* Dessin de toute les fruits */
         for (int i = 0; i < MAX_FRUITS; i++) {
             if (fruits[i].actif == true){
                 DrawCircleV(fruits[i].position, NIVEAUX[fruits[i].niveau].rayon, NIVEAUX[fruits[i].niveau].couleur);
             }
         }
-        /* Dessin du fruit de la main*/
+        /* Dessin du fruit de la main */
         DrawCircleV((Vector2){x, MAIN_Y}, NIVEAUX[niveau_main].rayon, NIVEAUX[niveau_main].couleur);
 
         /* Dessin du fruit suivant */
