@@ -29,6 +29,9 @@
 
 #define BONUS_PASTEQUE 200
 
+#define LIGNE_LIMITE_Y  BOITE_Y
+#define DELAI_GAME_OVER 2.0f   // secondes au-dessus de la ligne avant de perdre
+
 
 /* =========================================================
         STRUCTURES DE DONNEES
@@ -47,6 +50,7 @@ typedef struct {
     int     niveau;
     bool    actif;
     bool    deja_fusionne;
+    float   temps_au_dessus;
 } Fruit;
 
 
@@ -89,6 +93,7 @@ void ajouter_fruit(float x, float y, int niveau){
             fruits[i].ancienne_position = position;
             fruits[i].niveau = niveau;
             fruits[i].actif = true; 
+            fruits[i].temps_au_dessus = 0;
             return;
         }
     }
@@ -225,6 +230,24 @@ int gerer_fusions(void){
 
 }
 
+bool verifier_game_over(void){
+    for (int i = 0; i < MAX_FRUITS; i++){
+        if (fruits[i].actif == true){
+            if (fruits[i].position.y - NIVEAUX[fruits[i].niveau].rayon <= LIGNE_LIMITE_Y){ // Si on est au dessus
+                fruits[i].temps_au_dessus += DT;
+            }
+
+            else {      // Si on est en dessous
+                fruits[i].temps_au_dessus = 0;
+            }
+            if (fruits[i].temps_au_dessus >= DELAI_GAME_OVER){
+                return true;
+            }
+        }
+    }
+    return false;
+
+}
 
 /* =========================================================
         DEBUG
@@ -269,6 +292,7 @@ int main(void)
     int niveau_suivant = tirer_niveau();
     float delai = 0.5f; 
 
+    bool game_over = false;
     int score = 0;
 
     while (!WindowShouldClose()) {        // 2. boucle : 1 tour = 1 image
@@ -281,49 +305,70 @@ int main(void)
         if (x < borner_x_min) x = borner_x_min;
         if (x > borner_x_max) x = borner_x_max;                
 
-        delai -= GetFrameTime();        
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && (delai <= 0)){
+        delai -= GetFrameTime();
+        if (game_over == false){
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && (delai <= 0)){
 
 
-            int y = MAIN_Y;
-            ajouter_fruit(x, y, niveau_main);
+                int y = MAIN_Y;
+                ajouter_fruit(x, y, niveau_main);
 
-            niveau_main = niveau_suivant;
-            niveau_suivant = tirer_niveau();
-            delai = 0.5f;
-        }
-        /* Pas de else car on a rien a faire si on est en dehors du champ*/
-
-        for (int i = 0; i < MAX_FRUITS; i++) {
-            if ( fruits[i].actif == true){
-                mettre_a_jour_fruit(&fruits[i]);
+                niveau_main = niveau_suivant;
+                niveau_suivant = tirer_niveau();
+                delai = 0.5f;
             }
-        }
-
-        for (int iter = 0; iter < ITERATIONS; iter ++){
-            for (int i = 0; i < MAX_FRUITS; i++){
-                for (int j = i + 1; j < MAX_FRUITS; j++){
-                    if ( (fruits[i].actif == true) && (fruits[j].actif == true) ) {
-                        resoudre_collision(&fruits[i], &fruits[j]);
-                    }
-                }
-            }
+            /* Pas de else car on a rien a faire si on est en dehors du champ*/
 
             for (int i = 0; i < MAX_FRUITS; i++) {
                 if ( fruits[i].actif == true){
-                    contraindre_boite(&fruits[i]);
+                    mettre_a_jour_fruit(&fruits[i]);
                 }
             }
-        }
-        
-        /* Pour gerer les fusions */
-        score += gerer_fusions();
 
-        /* Touche pour debug. Ajoute 10 fruits */
-        touche_debug_D();
-        
-        /* Touche pour debug. Ajoute 2 pasteque */
-        touche_debug_F();
+            for (int iter = 0; iter < ITERATIONS; iter ++){
+                for (int i = 0; i < MAX_FRUITS; i++){
+                    for (int j = i + 1; j < MAX_FRUITS; j++){
+                        if ( (fruits[i].actif == true) && (fruits[j].actif == true) ) {
+                            resoudre_collision(&fruits[i], &fruits[j]);
+                        }
+                    }
+                }
+
+                for (int i = 0; i < MAX_FRUITS; i++) {
+                    if ( fruits[i].actif == true){
+                        contraindre_boite(&fruits[i]);
+                    }
+                }
+            }
+            
+            /* Pour gerer les fusions */
+            score += gerer_fusions();
+
+            /* Verifie qu'on est pas en game over */
+            game_over = verifier_game_over();
+
+            /* Touche pour debug. Ajoute 10 fruits */
+            touche_debug_D();
+            
+            /* Touche pour debug. Ajoute 2 pasteque */
+            touche_debug_F();
+
+        }
+        else {
+            // Perdu et donc R pour recommencer
+            if (IsKeyPressed(KEY_R)){
+                for (int i = 0; i < MAX_FRUITS; i++){
+                        fruits[i].actif = false;
+                    }
+
+                niveau_main = tirer_niveau();
+                niveau_suivant = tirer_niveau();
+                delai = 0.5f; 
+                game_over = false;
+                score = 0;                
+
+            }
+        }
 
         /* --- 2. Dessin --- */
         BeginDrawing();
@@ -338,6 +383,10 @@ int main(void)
                 DrawCircleV(fruits[i].position, NIVEAUX[fruits[i].niveau].rayon, NIVEAUX[fruits[i].niveau].couleur);
             }
         }
+
+        /* Dessin de la ligne rouge */
+        DrawLineEx((Vector2){BOITE_X, LIGNE_LIMITE_Y}, (Vector2){BOITE_X + BOITE_LARGEUR, LIGNE_LIMITE_Y}, 3.0f, RED);
+
         /* Dessin du fruit de la main */
         DrawCircleV((Vector2){x, MAIN_Y}, NIVEAUX[niveau_main].rayon, NIVEAUX[niveau_main].couleur);
 
@@ -348,7 +397,20 @@ int main(void)
         /* Dessin du score */
         DrawText(TextFormat("Score : %d", score), 20, 20, 30, DARKGRAY);
 
-        EndDrawing();
+        if (game_over == true){     // Affichege si on pert
+            DrawRectangle(0, 0, LARGEUR_FENETRE, HAUTEUR_FENETRE, Fade(BLACK, 0.6f));
+            int largeur_game_over = MeasureText("GAME OVER", 60);
+            DrawText("GAME OVER", (LARGEUR_FENETRE - largeur_game_over) / 2, 300, 60, RED);
+
+            int largeur_rejoue = MeasureText("Appuie sur R pour rejouer", 20);
+            DrawText("Appuie sur R pour rejouer", (LARGEUR_FENETRE - largeur_rejoue) / 2, 420, 20, LIGHTGRAY);
+
+            const char *texte_score = TextFormat("Score : %d", score);
+            int largeur_score = MeasureText(texte_score, 40);
+            DrawText(texte_score, (LARGEUR_FENETRE - largeur_score) / 2, 360, 40, WHITE);
+        }
+
+        EndDrawing(); // Toujours a la fin du dessin
     }
 
     CloseWindow();                        // 3. fermer
