@@ -16,6 +16,8 @@
 #define BOITE_LARGEUR 580
 #define BOITE_HAUTEUR 600
 
+#define MAIN_Y (BOITE_Y - 80)
+
 /* =========================================================
    ETAPE 0 : STRUCTURES DE DONNEES
    ========================================================= */
@@ -51,6 +53,27 @@ static const InfoNiveau NIVEAUX[NB_NIVEAUX] = {
 /* Le tableau de tous les fruits */
 static Fruit fruits[MAX_FRUITS];
 
+/* Fonction qui renvoie un niveau aléatoire entre 0 et 4.*/
+int tirer_niveau(void){
+    return GetRandomValue(0, 4);
+}
+
+/* Fonction qui remplit la première case libre. 
+   Si le tableau est plein, elle ne fait rien.*/
+void ajouter_fruit(float x, float y, int niveau){
+    /* Tant qu'on est a l'interieur du tableau et qu'il n'y a pas de place*/
+    for (int i = 0; i < MAX_FRUITS; i++){
+        if (fruits[i].actif == false){
+            Vector2 position = {x,y};
+            fruits[i].position = position;
+            fruits[i].ancienne_position = position;
+            fruits[i].niveau = niveau;
+            fruits[i].actif = true; 
+            return;
+        }
+    }
+
+}
 
 /* =========================================================
    ETAPE 1 : AFFICHAGE
@@ -65,17 +88,53 @@ int main(void)
         fruits[i].actif = false;
     }
 
-    while (!WindowShouldClose()) {        // 2. boucle : 1 tour = 1 image
-        /* --- 1. Mise a jour (vide pour l'instant) --- */
+    int niveau_main = tirer_niveau();
+    int niveau_suivant = tirer_niveau();
+    float delai = 0.5f; 
 
+    while (!WindowShouldClose()) {        // 2. boucle : 1 tour = 1 image
+        /* --- 1. Mise a jour --- */
+        int borner_x_min = BOITE_X + NIVEAUX[niveau_main].rayon;
+        int borner_x_max = BOITE_X + BOITE_LARGEUR - NIVEAUX[niveau_main].rayon;
+        int sourisX = GetMouseX();
+
+        float x = sourisX;
+        if (x < borner_x_min) x = borner_x_min;
+        if (x > borner_x_max) x = borner_x_max;                
+
+        delai -= GetFrameTime();        
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && (delai <= 0)){
+
+
+            int y = MAIN_Y;
+            ajouter_fruit(x, y, niveau_main);
+
+            niveau_main = niveau_suivant;
+            niveau_suivant = tirer_niveau();
+            delai = 0.5f;
+        }
+        /* Pas de else car on a rien a faire si on est en dehors du champ*/
+        
         /* --- 2. Dessin --- */
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
+        /* Dessin de la boite*/
         DrawRectangleLinesEx((Rectangle){BOITE_X, BOITE_Y, BOITE_LARGEUR, BOITE_HAUTEUR}, 4, DARKGRAY);
 
-        Vector2 centre = { BOITE_X + BOITE_LARGEUR / 2.0f, BOITE_Y + BOITE_HAUTEUR / 2.0f };
-        DrawCircleV(centre, NIVEAUX[2].rayon, NIVEAUX[2].couleur);
+        /* Dessin de toute les fruits*/
+        for (int i = 0; i < MAX_FRUITS; i++) {
+            if (fruits[i].actif == true){
+                DrawCircleV(fruits[i].position, NIVEAUX[fruits[i].niveau].rayon, NIVEAUX[fruits[i].niveau].couleur);
+            }
+        }
+        /* Dessin du fruit de la main*/
+        DrawCircleV((Vector2){x, MAIN_Y}, NIVEAUX[niveau_main].rayon, NIVEAUX[niveau_main].couleur);
+
+        /* Dessin du fruit suivant */
+        DrawText("Suivant", BOITE_LARGEUR - 100, 20, 20, DARKGRAY);
+        DrawCircleV((Vector2){BOITE_LARGEUR , 30}, 10, NIVEAUX[niveau_suivant].couleur);
+
 
         EndDrawing();
     }

@@ -18,7 +18,7 @@ Le plan complet est dans [jeu_pasteque_plan.txt](jeu_pasteque_plan.txt).
 
 - [x] 0. Structures de données
 - [x] 1. Affichage
-- [ ] 2. La main
+- [x] 2. La main
 - [ ] 3. Gravité
 - [ ] 4. Collisions avec la boîte
 - [ ] 5. Collisions entre fruits
