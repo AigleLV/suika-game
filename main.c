@@ -18,6 +18,8 @@
 #define BOITE_HAUTEUR 600
 #define EPAISSEUR_BOITE 4
 
+#define EPAISSEUR_CONTOUR 2
+
 #define MAIN_Y (BOITE_Y - 80)
 
 #define DT (1.0f / 60.0f)
@@ -32,7 +34,7 @@
 #define LIGNE_LIMITE_Y  BOITE_Y
 #define DELAI_GAME_OVER 2.0f   // secondes au-dessus de la ligne avant de perdre
 
-#define VITESSE_CROISSANCE 2.0f   // l'échelle gagne 4.0 par seconde
+#define VITESSE_CROISSANCE 2.0f   // l'échelle gagne 2.0 par seconde
 #define AMORTISSEMENT 0.99f
 
 /* =========================================================
@@ -163,8 +165,8 @@ void resoudre_collision(Fruit *a, Fruit *b){
         float nx = dx / distance;
         float ny = dy / distance;
 
-        float ma = ra * ra;   // masse de A
-        float mb = rb * rb;   // masse de B
+        float ma = ra;   // masse de A
+        float mb = rb;   // masse de B
         float total = ma + mb;
 
         float part_a = mb / total;   // A recule d'autant plus que B est lourd
@@ -270,6 +272,16 @@ bool verifier_game_over(void){
     return false;
 
 }
+
+void dessiner_fruit(Vector2 position, float rayon, Color couleur) {
+    Color fonce = ColorBrightness(couleur, -0.3f);   // -1 = noir, 0 = identique, +1 = blanc
+
+    DrawCircleV(position, rayon, fonce);        // Dessine le rayon fonce
+    DrawCircleV(position, rayon - EPAISSEUR_CONTOUR, couleur);  // Dessine la couleur avec rayon
+    DrawCircleV((Vector2) {position.x - rayon * 0.35f, position.y - rayon * 0.35f}, rayon * 0.25f, Fade(WHITE, 0.4f));
+
+}
+
 
 /* =========================================================
         DEBUG
@@ -410,7 +422,7 @@ int main(void)
         /* Dessin de toute les fruits */
         for (int i = 0; i < MAX_FRUITS; i++) {
             if (fruits[i].actif == true){
-                DrawCircleV(fruits[i].position, rayon_de(&fruits[i]), NIVEAUX[fruits[i].niveau].couleur);
+                dessiner_fruit(fruits[i].position, rayon_de(&fruits[i]), NIVEAUX[fruits[i].niveau].couleur);
             }
         }
 
@@ -419,12 +431,12 @@ int main(void)
 
         /* Dessin du fruit de la main */
         if ( game_over == false){
-            DrawCircleV((Vector2){x, MAIN_Y}, NIVEAUX[niveau_main].rayon, NIVEAUX[niveau_main].couleur);
+            dessiner_fruit((Vector2){x, MAIN_Y}, NIVEAUX[niveau_main].rayon, NIVEAUX[niveau_main].couleur);
         }
 
         /* Dessin du fruit suivant */
         DrawText("Suivant", BOITE_LARGEUR - 100, 20, 20, DARKGRAY);
-        DrawCircleV((Vector2){BOITE_LARGEUR , 30}, 10, NIVEAUX[niveau_suivant].couleur);
+        dessiner_fruit((Vector2){BOITE_LARGEUR , 30}, 10, NIVEAUX[niveau_suivant].couleur);
 
         /* Dessin du score */
         DrawText(TextFormat("Score : %d", score), 20, 20, 30, DARKGRAY);

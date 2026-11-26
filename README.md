@@ -25,4 +25,4 @@ Le plan complet est dans [jeu_pasteque_plan.txt](jeu_pasteque_plan.txt).
 - [x] 6. Fusion
 - [x] 7. Score
 - [x] 8. Game over
-- [ ] 9. Graphisme final
+- [x] 9. Graphisme final
