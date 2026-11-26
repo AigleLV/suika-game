@@ -1,4 +1,5 @@
 #include "raylib.h"
+#include <math.h>
 #include <stdbool.h>
 
 /* =========================================================
@@ -22,8 +23,10 @@
 #define DT (1.0f / 60.0f)
 #define GRAVITE 1500.0f
 
+#define ITERATIONS 8
+
 /* =========================================================
-   ETAPE 0 : STRUCTURES DE DONNEES
+        STRUCTURES DE DONNEES
    ========================================================= */
 
 /* Les caracteristiques d'un NIVEAU de fruit (commun a tousles fruits de ce niveau). */
@@ -62,6 +65,10 @@ int tirer_niveau(void){
     return GetRandomValue(0, 4);
 }
 
+/* =========================================================
+        FONCTION
+   ========================================================= */
+
 /* Fonction qui remplit la première case libre. 
    Si le tableau est plein, elle ne fait rien.*/
 void ajouter_fruit(float x, float y, int niveau){
@@ -93,9 +100,9 @@ void mettre_a_jour_fruit(Fruit *f) {
 
 void contraindre_boite(Fruit *f){
     float r     = NIVEAUX[f->niveau].rayon;
-    float x_min = BOITE_X;
-    float x_max = BOITE_X + BOITE_LARGEUR;
-    float y_max = BOITE_Y + BOITE_HAUTEUR;
+    float x_min = BOITE_X + EPAISSEUR_BOITE;
+    float x_max = BOITE_X + BOITE_LARGEUR - EPAISSEUR_BOITE;
+    float y_max = BOITE_Y + BOITE_HAUTEUR - EPAISSEUR_BOITE;
     /* Collision Boite */
     /* Mur gauche */
     if (f->position.x < x_min + r){
@@ -114,6 +121,45 @@ void contraindre_boite(Fruit *f){
 
 }
 
+void resoudre_collision(Fruit *a, Fruit *b){
+    float ra = NIVEAUX[a->niveau].rayon;        // Raille rayon de A
+    float rb = NIVEAUX[b->niveau].rayon;        // Raille rayon de B
+    float pxa =  a->position.x;                 // Position x de A
+    float pxb =  b->position.x;                 // Position x de B
+    float pya =  a->position.y;                 // Position y de A
+    float pyb =  b->position.y;                 // Position y de B
+
+    float dx = pxb - pxa;
+    float dy = pyb - pya;
+    float distance = sqrtf(dx*dx + dy*dy);
+
+    if (distance < 0.0001f){
+        return;
+    }
+
+    if ( distance < ra + rb){       // Alors il se chevauche
+        float recouvrement = (ra + rb) - distance;
+        float nx = dx / distance;
+        float ny = dy / distance;
+
+        pxa += (recouvrement / 2) * (-nx);
+        pya += (recouvrement / 2) * (-ny);
+    
+        pxb += (recouvrement / 2) * (nx);
+        pyb += (recouvrement / 2) * (ny);    
+    
+        a->position.x = pxa;
+        a->position.y = pya;
+        b->position.x = pxb;
+        b->position.y = pyb;
+    }
+
+}
+
+/* =========================================================
+        DEBUG
+   ========================================================= */
+
 void touche_debug(void) {
     if (IsKeyPressed(KEY_D)){
         for (int i = 0; i < 10; i ++){
@@ -126,7 +172,7 @@ void touche_debug(void) {
 }
 
 /* =========================================================
-   ETAPE 1 : AFFICHAGE
+        AFFICHAGE
    ========================================================= */
 
 int main(void)
@@ -168,10 +214,23 @@ int main(void)
         for (int i = 0; i < MAX_FRUITS; i++) {
             if ( fruits[i].actif == true){
                 mettre_a_jour_fruit(&fruits[i]);
-                contraindre_boite(&fruits[i]);
             }
         }
-        
+
+        for (int iter = 0; iter < ITERATIONS; iter ++){
+            for (int i = 0; i < MAX_FRUITS; i++){
+                for (int j = i + 1; j < MAX_FRUITS; j++){
+                    if ( (fruits[i].actif == true) && (fruits[j].actif == true) ) {
+                        resoudre_collision(&fruits[i], &fruits[j]);
+                    }
+                }
+            }
+            for (int i = 0; i < MAX_FRUITS; i++) {
+                if ( fruits[i].actif == true){
+                    contraindre_boite(&fruits[i]);
+                }
+            }
+        }
         /* Touche pour debug. Ajoute 10 fruits*/
         touche_debug();
 

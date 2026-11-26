@@ -21,7 +21,7 @@ Le plan complet est dans [jeu_pasteque_plan.txt](jeu_pasteque_plan.txt).
 - [x] 2. La main
 - [x] 3. Gravité
 - [x] 4. Collisions avec la boîte
-- [ ] 5. Collisions entre fruits
+- [x] 5. Collisions entre fruits
 - [ ] 6. Fusion
 - [ ] 7. Score
 - [ ] 8. Game over
