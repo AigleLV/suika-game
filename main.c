@@ -18,6 +18,9 @@
 
 #define MAIN_Y (BOITE_Y - 80)
 
+#define DT (1.0f / 60.0f)
+#define GRAVITE 1500.0f
+
 /* =========================================================
    ETAPE 0 : STRUCTURES DE DONNEES
    ========================================================= */
@@ -64,6 +67,7 @@ void ajouter_fruit(float x, float y, int niveau){
     /* Tant qu'on est a l'interieur du tableau et qu'il n'y a pas de place*/
     for (int i = 0; i < MAX_FRUITS; i++){
         if (fruits[i].actif == false){
+            
             Vector2 position = {x,y};
             fruits[i].position = position;
             fruits[i].ancienne_position = position;
@@ -73,6 +77,27 @@ void ajouter_fruit(float x, float y, int niveau){
         }
     }
 
+}
+
+void mettre_a_jour_fruit(Fruit *f) {
+    float vitesse_y = f->position.y - f->ancienne_position.y;
+    float vitesse_x = f->position.x - f->ancienne_position.x;
+    
+    f->ancienne_position = f->position;
+
+    f->position.y = f->position.y + vitesse_y + GRAVITE * DT*DT;
+    f->position.x = f->position.x + vitesse_x;
+}
+
+void touche_debug(void) {
+    if (IsKeyPressed(KEY_D)){
+        for (int i = 0; i < 10; i ++){
+            int niveau = tirer_niveau();
+            int x_min = BOITE_X + NIVEAUX[niveau].rayon;
+            int x_max = BOITE_X + BOITE_LARGEUR - NIVEAUX[niveau].rayon;
+            ajouter_fruit(GetRandomValue(x_min, x_max), MAIN_Y, niveau);
+        }
+    }
 }
 
 /* =========================================================
@@ -114,7 +139,16 @@ int main(void)
             delai = 0.5f;
         }
         /* Pas de else car on a rien a faire si on est en dehors du champ*/
+
+        for (int i = 0; i < MAX_FRUITS; i++) {
+            if ( fruits[i].actif == true){
+                mettre_a_jour_fruit(&fruits[i]);
+            }
+        }
         
+        /* Touche pour debug. Ajoute 10 fruits*/
+        touche_debug();
+
         /* --- 2. Dessin --- */
         BeginDrawing();
         ClearBackground(RAYWHITE);
