@@ -32,6 +32,8 @@
 #define LIGNE_LIMITE_Y  BOITE_Y
 #define DELAI_GAME_OVER 2.0f   // secondes au-dessus de la ligne avant de perdre
 
+#define VITESSE_CROISSANCE 2.0f   // l'échelle gagne 4.0 par seconde
+#define AMORTISSEMENT 0.99f
 
 /* =========================================================
         STRUCTURES DE DONNEES
@@ -51,6 +53,7 @@ typedef struct {
     bool    actif;
     bool    deja_fusionne;
     float   temps_au_dessus;
+    float echelle;   // 1.0 = taille normale, moins = en train de grandir
 } Fruit;
 
 
@@ -76,6 +79,10 @@ static Fruit fruits[MAX_FRUITS];
         FONCTION
    ========================================================= */
 
+float rayon_de(const Fruit *f) {
+    return NIVEAUX[f->niveau].rayon * f->echelle;
+}
+
 /* Fonction qui renvoie un niveau aléatoire entre 0 et 4.*/
 int tirer_niveau(void){
     return GetRandomValue(0, 4);
@@ -94,6 +101,7 @@ void ajouter_fruit(float x, float y, int niveau){
             fruits[i].niveau = niveau;
             fruits[i].actif = true; 
             fruits[i].temps_au_dessus = 0;
+            fruits[i].echelle = 1.0f;
             return;
         }
     }
@@ -101,8 +109,8 @@ void ajouter_fruit(float x, float y, int niveau){
 }
 
 void mettre_a_jour_fruit(Fruit *f) {
-    float vitesse_y = f->position.y - f->ancienne_position.y;
-    float vitesse_x = f->position.x - f->ancienne_position.x;
+    float vitesse_x = (f->position.x - f->ancienne_position.x) * AMORTISSEMENT;
+    float vitesse_y = (f->position.y - f->ancienne_position.y) * AMORTISSEMENT;
 
     f->ancienne_position = f->position;
 
@@ -112,7 +120,7 @@ void mettre_a_jour_fruit(Fruit *f) {
 }
 
 void contraindre_boite(Fruit *f){
-    float r     = NIVEAUX[f->niveau].rayon;
+    float r     = rayon_de(f);
     float x_min = BOITE_X + EPAISSEUR_BOITE;
     float x_max = BOITE_X + BOITE_LARGEUR - EPAISSEUR_BOITE;
     float y_max = BOITE_Y + BOITE_HAUTEUR - EPAISSEUR_BOITE;
@@ -135,8 +143,8 @@ void contraindre_boite(Fruit *f){
 }
 
 void resoudre_collision(Fruit *a, Fruit *b){
-    float ra = NIVEAUX[a->niveau].rayon;        // Raille rayon de A
-    float rb = NIVEAUX[b->niveau].rayon;        // Raille rayon de B
+    float ra = rayon_de(a);        // Raille rayon de A
+    float rb = rayon_de(b);        // Raille rayon de B
     float pxa =  a->position.x;                 // Position x de A
     float pxb =  b->position.x;                 // Position x de B
     float pya =  a->position.y;                 // Position y de A
@@ -155,11 +163,18 @@ void resoudre_collision(Fruit *a, Fruit *b){
         float nx = dx / distance;
         float ny = dy / distance;
 
-        pxa += (recouvrement / 2) * (-nx);
-        pya += (recouvrement / 2) * (-ny);
+        float ma = ra * ra;   // masse de A
+        float mb = rb * rb;   // masse de B
+        float total = ma + mb;
+
+        float part_a = mb / total;   // A recule d'autant plus que B est lourd
+        float part_b = ma / total;   // B recule d'autant plus que A est lourd
+
+        pxa += (recouvrement * part_a) * (-nx);
+        pya += (recouvrement * part_a) * (-ny);
     
-        pxb += (recouvrement / 2) * (nx);
-        pyb += (recouvrement / 2) * (ny);    
+        pxb += (recouvrement * part_b) * (nx);
+        pyb += (recouvrement * part_b) * (ny);    
     
         a->position.x = pxa;
         a->position.y = pya;
@@ -192,9 +207,10 @@ int gerer_fusions(void){
                 float dx = fruits[j].position.x - fruits[i].position.x;
                 float dy = fruits[j].position.y - fruits[i].position.y;
                 float distance = sqrtf(dx*dx + dy*dy);
-                float r = NIVEAUX[fruits[i].niveau].rayon;
+                float ri = rayon_de(&fruits[i]);
+                float rj = rayon_de(&fruits[j]);
 
-                if ( distance < r + r + TOLERANCE_FUSION) { // Ils sont a bonne distance pour fusionner
+                if (distance < ri + rj + TOLERANCE_FUSION) { // Ils sont a bonne distance pour fusionner
                     // Cas taille max de fruit -> 2 pasteque
                     if (fruits[i].niveau == NB_NIVEAUX -1 ){
                         fruits[i].actif = false;
@@ -212,7 +228,13 @@ int gerer_fusions(void){
                         fruits[i].ancienne_position.x = milieu_x;
                         fruits[i].ancienne_position.y = milieu_y;
 
-                        fruits[i].niveau += 1;
+                        float ancien_rayon = NIVEAUX[fruits[i].niveau].rayon;   // 1. lire AVANT
+
+                        fruits[i].niveau += 1;                                   // 2. monter de niveau
+
+                        float nouveau_rayon = NIVEAUX[fruits[i].niveau].rayon;  // 3. lire APRÈS
+                        fruits[i].echelle = ancien_rayon / nouveau_rayon;        // 4. ex. 47 / 57 ≈ 0,82
+                        
                         points_gagnes += NIVEAUX[fruits[i].niveau].points;
 
                         fruits[j].actif = false;
@@ -233,7 +255,7 @@ int gerer_fusions(void){
 bool verifier_game_over(void){
     for (int i = 0; i < MAX_FRUITS; i++){
         if (fruits[i].actif == true){
-            if (fruits[i].position.y - NIVEAUX[fruits[i].niveau].rayon <= LIGNE_LIMITE_Y){ // Si on est au dessus
+            if (fruits[i].position.y - rayon_de(&fruits[i]) <= LIGNE_LIMITE_Y){ // Si on est au dessus
                 fruits[i].temps_au_dessus += DT;
             }
 
@@ -320,8 +342,16 @@ int main(void)
             /* Pas de else car on a rien a faire si on est en dehors du champ*/
 
             for (int i = 0; i < MAX_FRUITS; i++) {
-                if ( fruits[i].actif == true){
+                if (fruits[i].actif == true){
                     mettre_a_jour_fruit(&fruits[i]);
+
+                    /* Croissance après une fusion */
+                    if (fruits[i].echelle < 1.0f){
+                        fruits[i].echelle += VITESSE_CROISSANCE * DT;
+                        if (fruits[i].echelle > 1.0f){
+                            fruits[i].echelle = 1.0f;   // on ne dépasse jamais la taille normale
+                        }
+                    }
                 }
             }
 
@@ -380,7 +410,7 @@ int main(void)
         /* Dessin de toute les fruits */
         for (int i = 0; i < MAX_FRUITS; i++) {
             if (fruits[i].actif == true){
-                DrawCircleV(fruits[i].position, NIVEAUX[fruits[i].niveau].rayon, NIVEAUX[fruits[i].niveau].couleur);
+                DrawCircleV(fruits[i].position, rayon_de(&fruits[i]), NIVEAUX[fruits[i].niveau].couleur);
             }
         }
 
@@ -388,7 +418,9 @@ int main(void)
         DrawLineEx((Vector2){BOITE_X, LIGNE_LIMITE_Y}, (Vector2){BOITE_X + BOITE_LARGEUR, LIGNE_LIMITE_Y}, 3.0f, RED);
 
         /* Dessin du fruit de la main */
-        DrawCircleV((Vector2){x, MAIN_Y}, NIVEAUX[niveau_main].rayon, NIVEAUX[niveau_main].couleur);
+        if ( game_over == false){
+            DrawCircleV((Vector2){x, MAIN_Y}, NIVEAUX[niveau_main].rayon, NIVEAUX[niveau_main].couleur);
+        }
 
         /* Dessin du fruit suivant */
         DrawText("Suivant", BOITE_LARGEUR - 100, 20, 20, DARKGRAY);
@@ -402,12 +434,12 @@ int main(void)
             int largeur_game_over = MeasureText("GAME OVER", 60);
             DrawText("GAME OVER", (LARGEUR_FENETRE - largeur_game_over) / 2, 300, 60, RED);
 
-            int largeur_rejoue = MeasureText("Appuie sur R pour rejouer", 20);
-            DrawText("Appuie sur R pour rejouer", (LARGEUR_FENETRE - largeur_rejoue) / 2, 420, 20, LIGHTGRAY);
-
             const char *texte_score = TextFormat("Score : %d", score);
             int largeur_score = MeasureText(texte_score, 40);
             DrawText(texte_score, (LARGEUR_FENETRE - largeur_score) / 2, 360, 40, WHITE);
+
+            int largeur_rejoue = MeasureText("Appuie sur R pour rejouer", 20);
+            DrawText("Appuie sur R pour rejouer", (LARGEUR_FENETRE - largeur_rejoue) / 2, 420, 20, LIGHTGRAY);
         }
 
         EndDrawing(); // Toujours a la fin du dessin
