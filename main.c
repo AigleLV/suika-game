@@ -26,6 +26,10 @@
 #define ITERATIONS 16
 
 #define TOLERANCE_FUSION 2
+
+#define BONUS_PASTEQUE 200
+
+
 /* =========================================================
         STRUCTURES DE DONNEES
    ========================================================= */
@@ -54,14 +58,15 @@ static const InfoNiveau NIVEAUX[NB_NIVEAUX] = {
     {  47.0f, { 255, 140,   0, 255 }, 15 },  /* niveau 4 : kaki      - orange         */
     {  57.0f, { 120, 200,  40, 255 }, 21 },  /* niveau 5 : pomme     - vert pomme     */
     {  67.0f, { 210, 190, 120, 255 }, 28 },  /* niveau 6 : poire     - beige          */
-    {  78.0f, { 255, 180, 170, 255 }, 36 },  /* niveau 6 : Peche     -                */    
-    {  90.0f, { 200, 150,  30, 255 }, 45 },  /* niveau 7 : ananas    - doré           */
-    { 105.0f, { 170, 230, 160, 255 }, 55 },  /* niveau 8 : melon     - vert pâle      */
-    { 125.0f, {  30, 130,  50, 255 }, 66 },  /* niveau 9 : pastèque  - vert foncé     */
+    {  78.0f, { 255, 180, 170, 255 }, 36 },  /* niveau 7 : Peche     -                */    
+    {  90.0f, { 200, 150,  30, 255 }, 45 },  /* niveau 8 : ananas    - doré           */
+    { 105.0f, { 170, 230, 160, 255 }, 55 },  /* niveau 9 : melon     - vert pâle      */
+    { 125.0f, {  30, 130,  50, 255 }, 66 },  /* niveau 10: pastèque  - vert foncé     */
 };
 
 /* Le tableau de tous les fruits */
 static Fruit fruits[MAX_FRUITS];
+
 
 /* =========================================================
         FONCTION
@@ -159,7 +164,9 @@ void resoudre_collision(Fruit *a, Fruit *b){
 
 }
 
-void gerer_fusions(void){
+int gerer_fusions(void){
+    int points_gagnes = 0;
+
     // --- 1. Remise à zéro pour cette frame ---
     for (int i = 0; i < MAX_FRUITS; i++ ){
         fruits[i].deja_fusionne = false;
@@ -187,8 +194,9 @@ void gerer_fusions(void){
                     if (fruits[i].niveau == NB_NIVEAUX -1 ){
                         fruits[i].actif = false;
                         fruits[j].actif = false;
-                        // (étape 7 : ajouter le gros bonus ici)
+                        points_gagnes += BONUS_PASTEQUE; // Gros bonus si 2 pasteque fusionne !!
                     }
+
                     else {
                         float milieu_x = (fruits[j].position.x + fruits[i].position.x) /2;
                         float milieu_y = (fruits[j].position.y + fruits[i].position.y) /2;
@@ -200,6 +208,7 @@ void gerer_fusions(void){
                         fruits[i].ancienne_position.y = milieu_y;
 
                         fruits[i].niveau += 1;
+                        points_gagnes += NIVEAUX[fruits[i].niveau].points;
 
                         fruits[j].actif = false;
 
@@ -212,8 +221,10 @@ void gerer_fusions(void){
         }
 
     }
+    return points_gagnes;
 
 }
+
 
 /* =========================================================
         DEBUG
@@ -232,11 +243,11 @@ void touche_debug_D(void) {
 
 void touche_debug_F(void) {
     if (IsKeyPressed(KEY_F)){
-        int x_min = BOITE_X + EPAISSEUR_BOITE + NIVEAUX[9].rayon;
-        int x_max = BOITE_X + BOITE_LARGEUR - EPAISSEUR_BOITE - NIVEAUX[9].rayon;
-        ajouter_fruit(x_min, MAIN_Y, 9);        // Pasteque a x min
-        ajouter_fruit(x_max, MAIN_Y, 9);        // Pasteque a x max
-        
+        int   niveau = NB_NIVEAUX - 1;                  // la pastèque, quel que soit le nombre de fruits
+        float r      = NIVEAUX[niveau].rayon;
+        float centre = BOITE_X + BOITE_LARGEUR / 2.0f;
+        ajouter_fruit(centre - r, MAIN_Y, niveau);      // pastèque gauche
+        ajouter_fruit(centre + r, MAIN_Y, niveau);      // pastèque droite, collée à la première
     }
 }
 
@@ -257,6 +268,8 @@ int main(void)
     int niveau_main = tirer_niveau();
     int niveau_suivant = tirer_niveau();
     float delai = 0.5f; 
+
+    int score = 0;
 
     while (!WindowShouldClose()) {        // 2. boucle : 1 tour = 1 image
         /* --- 1. Mise a jour --- */
@@ -304,7 +317,7 @@ int main(void)
         }
         
         /* Pour gerer les fusions */
-        gerer_fusions();
+        score += gerer_fusions();
 
         /* Touche pour debug. Ajoute 10 fruits */
         touche_debug_D();
@@ -332,6 +345,8 @@ int main(void)
         DrawText("Suivant", BOITE_LARGEUR - 100, 20, 20, DARKGRAY);
         DrawCircleV((Vector2){BOITE_LARGEUR , 30}, 10, NIVEAUX[niveau_suivant].couleur);
 
+        /* Dessin du score */
+        DrawText(TextFormat("Score : %d", score), 20, 20, 30, DARKGRAY);
 
         EndDrawing();
     }
